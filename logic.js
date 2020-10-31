@@ -1,58 +1,73 @@
-// Creating map object
-
-var map = L.map("map", {
-  center: [40.00, -100.00],
-  zoom: 4
+var myMap = L.map("map", {
+  center: [40, -120],
+  zoom: 5
 });
 
-const API_KEY = "pk.eyJ1IjoiZ21sZWFjaDE0IiwiYSI6ImNrZnJnNW5lMDBkN24ycm53a2UyZWVxMHgifQ.JHLY7VqBDQ5JY8yePS1O9w";
 
-// Adding tile layer
+L.tileLayer("https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}", {
+attribution: "© <a href='https://www.mapbox.com/about/maps/'>Mapbox</a> © <a href='http://www.openstreetmap.org/copyright'>OpenStreetMap</a> <strong><a href='https://www.mapbox.com/map-feedback/' target='_blank'>Improve this map</a></strong>",
+tileSize: 500,
+maxZoom: 20,
+zoomOffset: -1,
+id: "mapbox/light-v10",
+accessToken: API_KEY
+}).addTo(myMap);
 
-L.tileLayer("https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}", {
-  attribution: "Map data &copy; <a href=\"https://www.openstreetmap.org/\">OpenStreetMap</a> contributors, <a href=\"https://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA</a>, Imagery © <a href=\"https://www.mapbox.com/\">Mapbox</a>",
-  maxZoom: 18,
-  id: "mapbox.light",
-  accessToken: API_KEY
-}).addTo(map);
+var urlEarthquake = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson";
 
-var link = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson";
 
-d3.json(link, function(data) {
-  console.log(data)
-  var featuresarray = data.features
-  for (var i = 0; i < featuresarray.length; i++) {
-  var mycoordinates= featuresarray[i].geometry.coordinates
-  var magnitud = featuresarray[i].properties.mag
-  var mysize = magnitud * 10000
-  var myplace = featuresarray[i].properties.place
-  var mytype = featuresarray[i].properties.type
-  var color = "";
-  if (mysize > 50000) {
-    color = "red";
+// map data
+d3.json(urlEarthquake, function(data) {
+function styleInfo(feature) {
+  return {
+    opacity: 1,
+    fillOpacity: 1,
+    fillColor: getColor(feature.properties.mag),
+    color: "#000000",
+    radius: getRadius(feature.properties.mag),
+    weight: 0.5
+  };
+}
+
+function getColor(magnitude) {
+  switch (true) {
+    case magnitude > 7:
+      return "#FF0000";
+    case magnitude > 6:
+      return "#FF4500";
+    case magnitude > 5:
+      return "#FF8C00";
+    case magnitude > 4:
+      return "#FFA500";
+    case magnitude > 3:
+      return "#FFD700";
+    case magnitude > 2:
+      return "#FFFF00";
+    case magnitude > 1:
+      return "#ADFF2F";
+    default:
+      return "#00FF00";
   }
-  else if (mysize > 40000) {
-    color = "orange";
+}
+
+function getRadius(magnitude) {
+  if (magnitude ===0) {
+    return 1;
   }
-  else if (mysize > 30000) {
-    color = "#E49B24";
+  return magnitude*7;
+}
+
+
+//GeoJson to map
+L.geoJson(data, {
+  pointToLayer: function (feature, latlng) {
+    return L.circleMarker(latlng);
+  },
+  style: styleInfo,
+  onEachFeature: function(feature, layer) {
+    layer.bindPopup("Mag: " + feature.properties.mag + "<br>Place: " + feature.properties.place);
   }
-  else if (mysize > 20000) {
-    color = "lightorange";
-  }
-  else if (mysize > 10000) {
-    color = "yellow";
-  }
-  else {
-    color = "lime";
-  }
-    L.circle([mycoordinates[1],mycoordinates[0]], {
-      stroke: true,
-      fillOpacity: 0.50,
-      color: "black",
-	  weight: 0.50,
-      fillColor: color,
-      radius: mysize
-    }).bindPopup("<h1>" + mytype + "</h1> <hr> <h3>Magnitud: " + magnitud + "</h3> <hr> <h3>Place: " + myplace + "</h3>").addTo(map)
-  }
-});
+
+}).addTo(myMap);
+
+})
